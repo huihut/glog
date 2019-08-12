@@ -91,7 +91,10 @@ inline void GLogger::Write_Error(const std::string& fileName, const std::string&
 	LOG(ERROR) << "[" << fileName << " " << functionName << "] " << logContent;
 }
 
-// Get module name (exe/dll)
+// Get module(exe/dll) name
+// layer: The number of stack layers for the caller. for example: 
+//       * layer = 0, get the caller's own module name; 
+//       * layer = 1, get the module name of the layer above the caller
 inline std::string GLogger::GetModuleNameByStack(unsigned short layer)
 {
 	HANDLE process = GetCurrentProcess();
