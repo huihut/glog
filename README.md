@@ -50,3 +50,30 @@ advapi32.lib
 5. To copy the DLL in a post-build event
     * Debug：`xcopy /y /d "..\path_to_install\bin\glogd.dll" "$(OutDir)"`
     * Release：`xcopy /y /d "..\path_to_install\bin\glog.dll" "$(OutDir)"`
+
+## Example
+
+```cpp
+#include <glog/logging.h>
+int main()
+{
+    FLAGS_log_dir = "/home/$USER";              // Make sure the folder exists
+    google::InitGoogleLogging("");
+    google::SetLogDestination(google::GLOG_INFO, "/home/$USER/INFO"); // Make sure the folder exists
+    google::SetStderrLogging(google::GLOG_INFO);
+    google::SetLogFilenameExtension("log_");
+    FLAGS_colorlogtostderr = true;              // Set log color
+    FLAGS_logbufsecs = 0;                       // Set log output speed(s)
+    FLAGS_max_log_size = 1024;                  // Set max log file size
+    FLAGS_stop_logging_if_full_disk = true;     // If disk is full
+
+    LOG(INFO) << "[" << "fileName" << " " << "functionName" << "] " << "logContent";
+    LOG(WARNING) << "[" << "fileName" << " " << "functionName" << "] " << "logContent";
+    LOG(ERROR) << "[" << "fileName" << " " << "functionName" << "] " << "logContent";
+
+    google::ShutdownGoogleLogging();
+    return 0;
+}
+```
+
+* Windows: [example/example_windows.cpp](example/example_windows.cpp)
