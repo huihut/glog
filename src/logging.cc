@@ -903,8 +903,10 @@ void LogFileObject::FlushUnlocked(){
 }
 
 bool LogFileObject::CreateLogfile(const string& time_pid_string) {
-  string string_filename = base_filename_+filename_extension_+
-                           time_pid_string;
+  // string string_filename = base_filename_+filename_extension_+
+  //                          time_pid_string;
+  // @huihut: path + severity + '_' + file name + ".log"
+  string string_filename = base_filename_ + filename_extension_ + time_pid_string + ".log";
   const char* filename = string_filename.c_str();
   int fd = open(filename, O_WRONLY | O_CREAT | O_EXCL, FLAGS_logfile_mode);
   if (fd == -1) return false;
@@ -980,6 +982,23 @@ void LogFileObject::Write(bool force_flush,
     rollover_attempt_ = kRolloverAttemptFrequency-1;
   }
 
+  // @huihut: default module name & length
+  size_t module_len = 3;
+  string module_name = "etc";
+  
+  // @huihut: get the module name from the log message
+  const char *ret_left, *ret_right;
+  ret_left = strchr(message, '[');
+  if(ret_left != NULL)
+  {
+    ret_right = strchr(ret_left, ' ');
+    if(ret_right != NULL)
+    {
+      module_len =  ret_right - (ret_left + 1);
+      module_name = string((ret_left + 1), module_len);
+    }
+  }
+
   // If there's no destination file, make one before outputting
   if (file_ == NULL) {
     // Try to rollover the log file every 32 log messages.  The only time
@@ -988,22 +1007,26 @@ void LogFileObject::Write(bool force_flush,
     if (++rollover_attempt_ != kRolloverAttemptFrequency) return;
     rollover_attempt_ = 0;
 
-    struct ::tm tm_time;
-    localtime_r(&timestamp, &tm_time);
+    // @huihut Use only the 'module_name' as the log file name
+    // struct ::tm tm_time;
+    // localtime_r(&timestamp, &tm_time);
 
-    // The logfile's filename will have the date/time & pid in it
-    ostringstream time_pid_stream;
-    time_pid_stream.fill('0');
-    time_pid_stream << 1900+tm_time.tm_year
-                    << setw(2) << 1+tm_time.tm_mon
-                    << setw(2) << tm_time.tm_mday
-                    << '-'
-                    << setw(2) << tm_time.tm_hour
-                    << setw(2) << tm_time.tm_min
-                    << setw(2) << tm_time.tm_sec
-                    << '.'
-                    << GetMainThreadPid();
-    const string& time_pid_string = time_pid_stream.str();
+    // // The logfile's filename will have the date/time & pid in it
+    // ostringstream time_pid_stream;
+    // time_pid_stream.fill('0');
+    // time_pid_stream << 1900+tm_time.tm_year
+    //                 << setw(2) << 1+tm_time.tm_mon
+    //                 << setw(2) << tm_time.tm_mday
+    //                 << '-'
+    //                 << setw(2) << tm_time.tm_hour
+    //                 << setw(2) << tm_time.tm_min
+    //                 << setw(2) << tm_time.tm_sec
+    //                 << '.'
+    //                 << GetMainThreadPid();
+    // const string& time_pid_string = time_pid_stream.str();
+
+    // @huihut: Warning: use the 'time_pid_string' storage 'module_name'
+    const string& time_pid_string = module_name;
 
     if (base_filename_selected_) {
       if (!CreateLogfile(time_pid_string)) {
@@ -1024,21 +1047,25 @@ void LogFileObject::Write(bool force_flush,
       //
       // Where does the file get put?  Successively try the directories
       // "/tmp", and "."
-      string stripped_filename(
-          glog_internal_namespace_::ProgramInvocationShortName());
-      string hostname;
-      GetHostName(&hostname);
 
-      string uidname = MyUserName();
+      // @huihut Does not generate unwanted log files
+      // string stripped_filename(
+      //     glog_internal_namespace_::ProgramInvocationShortName());
+      // string hostname;
+      // GetHostName(&hostname);
+
+      // string uidname = MyUserName();
+
       // We should not call CHECK() here because this function can be
       // called after holding on to log_mutex. We don't want to
       // attempt to hold on to the same mutex, and get into a
       // deadlock. Simply use a name like invalid-user.
-      if (uidname.empty()) uidname = "invalid-user";
 
-      stripped_filename = stripped_filename+'.'+hostname+'.'
-                          +uidname+".log."
-                          +LogSeverityNames[severity_]+'.';
+      // if (uidname.empty()) uidname = "invalid-user";
+
+      // stripped_filename = stripped_filename+'.'+hostname+'.'
+      //                     +uidname+".log."
+      //                     +LogSeverityNames[severity_]+'.';
       // We're going to (potentially) try to put logs in several different dirs
       const vector<string> & log_dirs = GetLoggingDirectories();
 
@@ -1048,7 +1075,7 @@ void LogFileObject::Write(bool force_flush,
       for (vector<string>::const_iterator dir = log_dirs.begin();
            dir != log_dirs.end();
            ++dir) {
-        base_filename_ = *dir + "/" + stripped_filename;
+        // base_filename_ = *dir + "/" + stripped_filename;
         if ( CreateLogfile(time_pid_string) ) {
           success = true;
           break;
@@ -1063,27 +1090,28 @@ void LogFileObject::Write(bool force_flush,
       }
     }
 
-    // Write a header message into the log file
-    ostringstream file_header_stream;
-    file_header_stream.fill('0');
-    file_header_stream << "Log file created at: "
-                       << 1900+tm_time.tm_year << '/'
-                       << setw(2) << 1+tm_time.tm_mon << '/'
-                       << setw(2) << tm_time.tm_mday
-                       << ' '
-                       << setw(2) << tm_time.tm_hour << ':'
-                       << setw(2) << tm_time.tm_min << ':'
-                       << setw(2) << tm_time.tm_sec << '\n'
-                       << "Running on machine: "
-                       << LogDestination::hostname() << '\n'
-                       << "Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu "
-                       << "threadid file:line] msg" << '\n';
-    const string& file_header_string = file_header_stream.str();
+    // @huihut delete file_header
+    // // Write a header message into the log file
+    // ostringstream file_header_stream;
+    // file_header_stream.fill('0');
+    // file_header_stream << "Log file created at: "
+    //                    << 1900+tm_time.tm_year << '/'
+    //                    << setw(2) << 1+tm_time.tm_mon << '/'
+    //                    << setw(2) << tm_time.tm_mday
+    //                    << ' '
+    //                    << setw(2) << tm_time.tm_hour << ':'
+    //                    << setw(2) << tm_time.tm_min << ':'
+    //                    << setw(2) << tm_time.tm_sec << '\n'
+    //                    << "Running on machine: "
+    //                    << LogDestination::hostname() << '\n'
+    //                    << "Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu "
+    //                    << "threadid file:line] msg" << '\n';
+    // const string& file_header_string = file_header_stream.str();
 
-    const int header_len = file_header_string.size();
-    fwrite(file_header_string.data(), 1, header_len, file_);
-    file_length_ += header_len;
-    bytes_since_flush_ += header_len;
+    // const int header_len = file_header_string.size();
+    // fwrite(file_header_string.data(), 1, header_len, file_);
+    // file_length_ += header_len;
+    // bytes_since_flush_ += header_len;
   }
 
   // Write to LOG file
@@ -1289,8 +1317,9 @@ void LogMessage::Init(const char* file,
              << ' '
              << setfill(' ') << setw(5)
              << static_cast<unsigned int>(GetTID()) << setfill('0')
-             << ' '
-             << data_->basename_ << ':' << data_->line_ << "] ";
+             << ' ';
+             // @huihut delete file & line
+            //  << data_->basename_ << ':' << data_->line_ << "] ";
   }
   data_->num_prefix_chars_ = data_->stream_.pcount();
 

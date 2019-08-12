@@ -10,3 +10,4 @@ config.h
 *.vcxproj
 *.filters
 bazel-*
+.vscode/
